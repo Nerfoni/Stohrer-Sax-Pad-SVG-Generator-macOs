@@ -21,11 +21,50 @@ jobs:
       - name: Install dependencies
         run: pip install pyinstaller svgwrite
 
-      - name: Build with PyInstaller
-        run: pyinstaller --noconsole --onefile --name "StohrerPadGenerator" main.py
+      - name: Build with PyInstaller (App Bundle)
+        run: |
+          pyinstaller --noconsole --onefile --name "StohrerPadGenerator" --icon=icon.icns main.py
+
+          # Create proper macOS app bundle
+          mkdir -p "StohrerPadGenerator.app/Contents/MacOS"
+          mkdir -p "StohrerPadGenerator.app/Contents/Resources"
+
+          # Move the executable to the app bundle
+          mv dist/StohrerPadGenerator "StohrerPadGenerator.app/Contents/MacOS/"
+
+          # Create Info.plist for the app bundle
+          cat > "StohrerPadGenerator.app/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>StohrerPadGenerator</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.stohrer.saxpadgenerator</string>
+              <key>CFBundleName</key>
+              <string>Stohrer Sax Pad SVG Generator</string>
+              <key>CFBundleVersion</key>
+              <string>1.3-macOS</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.3-macOS</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleSignature</key>
+              <string>????</string>
+              <key>CFBundleIconFile</key>
+              <string>icon</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>10.15</string>
+          </dict>
+          </plist>
+          EOF
+
+          # Copy icon to Resources
+          cp icon.icns "StohrerPadGenerator.app/Contents/Resources/"
 
       - name: Upload macOS App
         uses: actions/upload-artifact@v4
         with:
           name: StohrerPadGenerator-macOS
-          path: dist/StohrerPadGenerator
+          path: StohrerPadGenerator.app

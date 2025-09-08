@@ -1,0 +1,141 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create release from"
+        required: true
+        default: "v1.3-macOS"
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install pyinstaller svgwrite
+
+      - name: Build with PyInstaller (App Bundle)
+        run: |
+          pyinstaller --noconsole --onefile --name "StohrerPadGenerator" --icon=icon.icns main.py
+
+          # Create proper macOS app bundle
+          mkdir -p "StohrerPadGenerator.app/Contents/MacOS"
+          mkdir -p "StohrerPadGenerator.app/Contents/Resources"
+
+          # Move the executable to the app bundle
+          mv dist/StohrerPadGenerator "StohrerPadGenerator.app/Contents/MacOS/"
+
+          # Create Info.plist for the app bundle
+          cat > "StohrerPadGenerator.app/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>StohrerPadGenerator</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.stohrer.saxpadgenerator</string>
+              <key>CFBundleName</key>
+              <string>Stohrer Sax Pad SVG Generator</string>
+              <key>CFBundleVersion</key>
+              <string>1.3-macOS</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.3-macOS</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleSignature</key>
+              <string>????</string>
+              <key>CFBundleIconFile</key>
+              <string>icon</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>10.15</string>
+          </dict>
+          </plist>
+          EOF
+
+          # Copy icon to Resources
+          cp icon.icns "StohrerPadGenerator.app/Contents/Resources/"
+
+      - name: Create DMG
+        run: |
+          # Install create-dmg
+          brew install create-dmg
+
+          # Create DMG
+          create-dmg \
+            --volname "Stohrer Sax Pad SVG Generator" \
+            --volicon "icon.icns" \
+            --window-pos 200 120 \
+            --window-size 600 300 \
+            --icon-size 100 \
+            --icon "StohrerPadGenerator.app" 175 120 \
+            --hide-extension "StohrerPadGenerator.app" \
+            --app-drop-link 425 120 \
+            "StohrerPadGenerator-1.3-macOS.dmg" \
+            "StohrerPadGenerator.app"
+
+      - name: Get tag name
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: Stohrer Sax Pad SVG Generator ${{ steps.get_tag.outputs.tag }}
+          body: |
+            ## Stohrer Sax Pad SVG Generator - macOS Edition
+
+            A macOS port of the original Stohrer Sax Pad SVG Generator.
+
+            ### What's New
+            - Native macOS app bundle (.app)
+            - macOS-optimized UI with native colors
+            - Automatic dependency management
+            - Built with PyInstaller for easy distribution
+
+            ### Installation
+            1. Download the DMG file below
+            2. Open the DMG and drag the app to Applications
+            3. Launch from Applications or Spotlight
+
+            ### Features
+            - SVG creation with basic nesting
+            - Layout in proscribed space (unless it won't fit)
+            - Save/delete pad presets
+            - Center hole options (none, 3.0mm, 3.5mm)
+            - User-defined minimum pad size for center hole
+            - Select inches-cm-mm for sheet size
+            - Advanced options to change sizing rules
+            - User-selectable layer colors (Lightburn palette only)
+            - Felt thickness configuration (in or mm)
+
+            ### Original Project
+            This is a macOS port of the original Windows version by Matt.
+          files: |
+            StohrerPadGenerator.app
+            StohrerPadGenerator-1.3-macOS.dmg
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

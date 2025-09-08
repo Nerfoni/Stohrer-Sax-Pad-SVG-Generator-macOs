@@ -82,7 +82,7 @@ COLORS = {
 class PadSVGGeneratorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Stohrer Sax Pad SVG Generator")
+        self.root.title("Stohrer Sax Pad SVG Generator v1.3-macOS")
         self.root.geometry("620x640")
         
         # Use Mac-native colors
