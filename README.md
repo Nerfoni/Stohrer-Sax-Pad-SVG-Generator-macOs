@@ -20,35 +20,19 @@ A macOS port of the original Stohrer Sax Pad SVG Generator. Generates SVGs for l
 
 - Native macOS app bundle (.app)
 - macOS-optimized UI with native colors
-- Automatic dependency management
-- Built with PyInstaller for easy distribution
-- Drag to Applications folder to install
 
 ## Usage
 
 1. Download the latest release from the [Releases page](../../releases)
 2. Open the DMG file and drag the `StohrerPadGenerator.app` to your Applications folder
-3. **If you get a "damaged" error**: Right-click the app and select "Open", then click "Open" in the dialog
-4. Launch the app from Applications or Spotlight
-5. Enter pad sizes like "34.0 x 10" (one per line)
-6. Select materials and configure options
-7. Generate SVGs for your laser cutter
+3. Launch the app from Applications or Spotlight
+4. Enter pad sizes like "34.0 x 10" (one per line)
+5. Select materials and configure options
+6. Generate SVGs for your laser cutter
 
-### Troubleshooting "Damaged" App Error
+### Troubleshooting
 
-If macOS says the app is "damaged and can't be opened":
-
-**Option 1 (Recommended):**
-
-- Right-click the app → "Open" → Click "Open" in the dialog
-
-**Option 2 (Terminal):**
-
-```bash
-sudo xattr -d com.apple.quarantine /Applications/StohrerPadGenerator.app
-```
-
-**Option 3 (System Preferences):**
+If macOS says the app is unsafe to open
 
 - Go to System Preferences → Security & Privacy → General
 - Look for "StohrerPadGenerator was blocked" and click "Open Anyway"
@@ -63,7 +47,7 @@ Make sure to enter the pad sizes like it suggests, e.g. "34.0 x 10" without the 
 
 ## Original Project
 
-This is a macOS port of the original Windows version by Matt. The original project was created with AI assistance and provides excellent functionality for saxophone pad generation.
+This is a macOS port of the original Windows version by https://github.com/stohrermusic
 
 ## Building from Source
 
