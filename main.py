@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
 import json
+import sys
 
 # --- Lightburn Color Palette ---
 LIGHTBURN_COLORS = [
@@ -46,15 +47,47 @@ DEFAULT_SETTINGS = {
     }
 }
 
-PRESET_FILE = "pad_presets.json"
-SETTINGS_FILE = "app_settings.json"
+def get_app_data_dir():
+    """Get the appropriate directory for storing application data."""
+    if getattr(sys, 'frozen', False):
+        # Running as a compiled executable
+        app_dir = os.path.dirname(sys.executable)
+    else:
+        # Running as a script
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Create app data directory if it doesn't exist
+    data_dir = os.path.join(app_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
+
+# Get the data directory and set file paths
+DATA_DIR = get_app_data_dir()
+PRESET_FILE = os.path.join(DATA_DIR, "pad_presets.json")
+SETTINGS_FILE = os.path.join(DATA_DIR, "app_settings.json")
+
+# Mac-native color scheme
+COLORS = {
+    'bg_main': '#F2F2F7',           # Mac system background (iOS/macOS gray)
+    'bg_secondary': '#FFFFFF',      # Mac window background
+    'text': '#000000',              # Black text
+    'text_secondary': '#3C3C43',    # Mac secondary text color
+    'entry_bg': '#FFFFFF',          # White entry background
+    'entry_fg': '#000000',          # Black entry text
+    'button_bg': '#E5E5EA',         # Light gray button background
+    'button_fg': '#000000',         # Black button text
+    'accent': '#007AFF'             # Blue accent color
+}
 
 class PadSVGGeneratorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Stohrer Sax Pad SVG Generator")
         self.root.geometry("620x640")
-        self.root.configure(bg="#FFFDD0")
+        
+        # Use Mac-native colors
+        self.colors = COLORS
+        self.root.configure(bg=self.colors['bg_main'])
 
         self.settings = self.load_settings()
         self.presets = self.load_presets()
@@ -89,10 +122,14 @@ class PadSVGGeneratorApp:
 
     def save_settings(self):
         try:
+            # Ensure the data directory exists
+            os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
             with open(SETTINGS_FILE, 'w') as f:
                 json.dump(self.settings, f, indent=2)
+        except PermissionError:
+            messagebox.showerror("Permission Error", f"Cannot save settings to:\n{SETTINGS_FILE}\n\nPlease check file permissions or run the application with appropriate privileges.")
         except Exception as e:
-            messagebox.showerror("Error Saving Settings", f"Could not save settings:\n{e}")
+            messagebox.showerror("Error Saving Settings", f"Could not save settings to:\n{SETTINGS_FILE}\n\nError: {e}")
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -106,14 +143,15 @@ class PadSVGGeneratorApp:
         options_menu.add_command(label="Exit", command=self.on_exit)
 
     def create_widgets(self):
-        tk.Label(self.root, text="Enter pad sizes (e.g. 42.0x3):", bg="#FFFDD0").pack(pady=5)
-        self.pad_entry = tk.Text(self.root, height=10)
+        tk.Label(self.root, text="Enter pad sizes (e.g. 42.0x3):", bg=self.colors['bg_main'], fg=self.colors['text']).pack(pady=5)
+        self.pad_entry = tk.Text(self.root, height=10, fg=self.colors['entry_fg'], bg=self.colors['entry_bg'])
         self.pad_entry.pack(fill="x", padx=10)
 
-        preset_frame = tk.Frame(self.root, bg="#FFFDD0")
+        preset_frame = tk.Frame(self.root, bg=self.colors['bg_main'])
         preset_frame.pack(pady=10)
         
-        tk.Button(preset_frame, text="Save as Preset", command=self.on_save_preset).pack(side="left", padx=5)
+        save_btn = tk.Button(preset_frame, text="Save as Preset", command=self.on_save_preset, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        save_btn.pack(side="left", padx=5)
         
         preset_names = list(self.presets.keys())
         self.preset_var = tk.StringVar()
@@ -122,9 +160,10 @@ class PadSVGGeneratorApp:
         self.preset_menu.pack(side="left", padx=5)
         self.preset_menu.bind("<<ComboboxSelected>>", lambda e: self.on_load_preset(self.preset_var.get()))
         
-        tk.Button(preset_frame, text="Delete Preset", command=self.on_delete_preset).pack(side="left", padx=5)
+        delete_btn = tk.Button(preset_frame, text="Delete Preset", command=self.on_delete_preset, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        delete_btn.pack(side="left", padx=5)
 
-        tk.Label(self.root, text="Select materials:", bg="#FFFDD0").pack(pady=5)
+        tk.Label(self.root, text="Select materials:", bg=self.colors['bg_main'], fg=self.colors['text']).pack(pady=5)
         self.material_vars = {
             'felt': tk.BooleanVar(value=True), 
             'card': tk.BooleanVar(value=True), 
@@ -132,35 +171,38 @@ class PadSVGGeneratorApp:
             'exact_size': tk.BooleanVar(value=False)
         }
         for m in self.material_vars:
-            tk.Checkbutton(self.root, text=m.replace('_', ' ').capitalize(), variable=self.material_vars[m], bg="#FFFDD0").pack(anchor='w', padx=20)
+            tk.Checkbutton(self.root, text=m.replace('_', ' ').capitalize(), variable=self.material_vars[m], bg=self.colors['bg_main'], fg=self.colors['text'], selectcolor=self.colors['entry_bg']).pack(anchor='w', padx=20)
 
-        options_frame = tk.Frame(self.root, bg="#FFFDD0")
+        options_frame = tk.Frame(self.root, bg=self.colors['bg_main'])
         options_frame.pack(pady=10, fill='x', padx=10)
         options_frame.columnconfigure(1, weight=1)
         options_frame.columnconfigure(3, weight=1)
 
-        tk.Label(options_frame, text="Center hole:", bg="#FFFDD0").grid(row=0, column=0, sticky='w', padx=5)
+        tk.Label(options_frame, text="Center hole:", bg=self.colors['bg_main'], fg=self.colors['text']).grid(row=0, column=0, sticky='w', padx=5)
         self.hole_var = tk.StringVar(value=self.settings["hole_option"])
-        tk.OptionMenu(options_frame, self.hole_var, "No center holes", "3.5mm", "3.0mm").grid(row=0, column=1, sticky='w')
+        hole_menu = tk.OptionMenu(options_frame, self.hole_var, "No center holes", "3.5mm", "3.0mm")
+        hole_menu.config(fg=self.colors['entry_fg'], bg=self.colors['entry_bg'])
+        hole_menu.grid(row=0, column=1, sticky='w')
 
-        self.unit_label = tk.Label(options_frame, text=f"Sheet width ({self.settings['units']}):", bg="#FFFDD0")
+        self.unit_label = tk.Label(options_frame, text=f"Sheet width ({self.settings['units']}):", bg=self.colors['bg_main'], fg=self.colors['text'])
         self.unit_label.grid(row=1, column=0, sticky='w', padx=5)
-        self.width_entry = tk.Entry(options_frame)
+        self.width_entry = tk.Entry(options_frame, fg=self.colors['entry_fg'], bg=self.colors['entry_bg'])
         self.width_entry.insert(0, self.settings["sheet_width"])
         self.width_entry.grid(row=1, column=1, sticky='ew')
 
-        self.height_label = tk.Label(options_frame, text=f"Sheet height ({self.settings['units']}):", bg="#FFFDD0")
+        self.height_label = tk.Label(options_frame, text=f"Sheet height ({self.settings['units']}):", bg=self.colors['bg_main'], fg=self.colors['text'])
         self.height_label.grid(row=2, column=0, sticky='w', padx=5)
-        self.height_entry = tk.Entry(options_frame)
+        self.height_entry = tk.Entry(options_frame, fg=self.colors['entry_fg'], bg=self.colors['entry_bg'])
         self.height_entry.insert(0, self.settings["sheet_height"])
         self.height_entry.grid(row=2, column=1, sticky='ew')
 
-        tk.Label(self.root, text="Output filename base (no extension):", bg="#FFFDD0").pack(pady=5)
-        self.filename_entry = tk.Entry(self.root)
+        tk.Label(self.root, text="Output filename base (no extension):", bg=self.colors['bg_main'], fg=self.colors['text']).pack(pady=5)
+        self.filename_entry = tk.Entry(self.root, fg=self.colors['entry_fg'], bg=self.colors['entry_bg'])
         self.filename_entry.insert(0, "my_pad_job")
         self.filename_entry.pack(fill="x", padx=10)
 
-        tk.Button(self.root, text="Generate SVGs", command=self.on_generate, font=('Helvetica', 10, 'bold')).pack(pady=15)
+        generate_btn = tk.Button(self.root, text="Generate SVGs", command=self.on_generate, font=('Helvetica', 10, 'bold'), fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        generate_btn.pack(pady=15)
 
     def open_options_window(self):
         OptionsWindow(self.root, self.settings, self.update_ui_from_settings, self.save_settings)
@@ -251,12 +293,16 @@ class PadSVGGeneratorApp:
             
             self.presets[name] = pad_text
             try:
+                # Ensure the data directory exists
+                os.makedirs(os.path.dirname(PRESET_FILE), exist_ok=True)
                 with open(PRESET_FILE, 'w') as f:
                     json.dump(self.presets, f, indent=2)
                 self.preset_menu['values'] = list(self.presets.keys())
-                messagebox.showinfo("Preset Saved", f"Preset '{name}' saved successfully.")
+                messagebox.showinfo("Preset Saved", f"Preset '{name}' saved successfully to:\n{PRESET_FILE}")
+            except PermissionError:
+                messagebox.showerror("Permission Error", f"Cannot save preset to:\n{PRESET_FILE}\n\nPlease check file permissions or run the application with appropriate privileges.")
             except Exception as e:
-                messagebox.showerror("Error Saving Preset", str(e))
+                messagebox.showerror("Error Saving Preset", f"Could not save preset to:\n{PRESET_FILE}\n\nError: {e}")
 
     def on_load_preset(self, selected_name):
         if selected_name in self.presets:
@@ -269,14 +315,18 @@ class PadSVGGeneratorApp:
             if messagebox.askyesno("Delete Preset", f"Are you sure you want to delete the preset '{selected}'?"):
                 del self.presets[selected]
                 try:
+                    # Ensure the data directory exists
+                    os.makedirs(os.path.dirname(PRESET_FILE), exist_ok=True)
                     with open(PRESET_FILE, 'w') as f:
                         json.dump(self.presets, f, indent=2)
                     self.preset_menu['values'] = list(self.presets.keys())
                     self.preset_menu.set("Load Preset")
                     self.pad_entry.delete("1.0", tk.END)
                     messagebox.showinfo("Preset Deleted", f"Preset '{selected}' deleted.")
+                except PermissionError:
+                    messagebox.showerror("Permission Error", f"Cannot save preset file to:\n{PRESET_FILE}\n\nPlease check file permissions or run the application with appropriate privileges.")
                 except Exception as e:
-                    messagebox.showerror("Error Deleting Preset", str(e))
+                    messagebox.showerror("Error Deleting Preset", f"Could not save preset file to:\n{PRESET_FILE}\n\nError: {e}")
 
 class OptionsWindow:
     def __init__(self, parent, settings, update_callback, save_callback):
@@ -284,10 +334,13 @@ class OptionsWindow:
         self.update_callback = update_callback
         self.save_callback = save_callback
         
+        # Use Mac-native colors
+        self.colors = COLORS
+        
         self.top = tk.Toplevel(parent)
         self.top.title("Sizing Rules")
         self.top.geometry("450x340")
-        self.top.configure(bg="#F0EAD6")
+        self.top.configure(bg=self.colors['bg_secondary'])
         self.top.transient(parent)
         self.top.grab_set()
 
@@ -299,45 +352,48 @@ class OptionsWindow:
         self.felt_thickness_var = tk.DoubleVar(value=self.settings["felt_thickness"])
         self.felt_thickness_unit_var = tk.StringVar(value=self.settings["felt_thickness_unit"])
 
-        main_frame = tk.Frame(self.top, bg="#F0EAD6", padx=10, pady=10)
+        main_frame = tk.Frame(self.top, bg=self.colors['bg_secondary'], padx=10, pady=10)
         main_frame.pack(fill="both", expand=True)
 
-        unit_frame = tk.LabelFrame(main_frame, text="Sheet Units", bg="#F0EAD6", padx=5, pady=5)
+        unit_frame = tk.LabelFrame(main_frame, text="Sheet Units", bg=self.colors['bg_secondary'], fg=self.colors['text'], padx=5, pady=5)
         unit_frame.pack(fill="x", pady=5)
-        tk.Radiobutton(unit_frame, text="Inches (in)", variable=self.unit_var, value="in", bg="#F0EAD6").pack(side="left", padx=5)
-        tk.Radiobutton(unit_frame, text="Centimeters (cm)", variable=self.unit_var, value="cm", bg="#F0EAD6").pack(side="left", padx=5)
-        tk.Radiobutton(unit_frame, text="Millimeters (mm)", variable=self.unit_var, value="mm", bg="#F0EAD6").pack(side="left", padx=5)
+        tk.Radiobutton(unit_frame, text="Inches (in)", variable=self.unit_var, value="in", bg=self.colors['bg_secondary'], fg=self.colors['text']).pack(side="left", padx=5)
+        tk.Radiobutton(unit_frame, text="Centimeters (cm)", variable=self.unit_var, value="cm", bg=self.colors['bg_secondary'], fg=self.colors['text']).pack(side="left", padx=5)
+        tk.Radiobutton(unit_frame, text="Millimeters (mm)", variable=self.unit_var, value="mm", bg=self.colors['bg_secondary'], fg=self.colors['text']).pack(side="left", padx=5)
 
-        rules_frame = tk.LabelFrame(main_frame, text="Sizing Rules (Advanced)", bg="#F0EAD6", padx=5, pady=5)
+        rules_frame = tk.LabelFrame(main_frame, text="Sizing Rules (Advanced)", bg=self.colors['bg_secondary'], fg=self.colors['text'], padx=5, pady=5)
         rules_frame.pack(fill="x", pady=5)
         rules_frame.columnconfigure(1, weight=1)
 
-        tk.Label(rules_frame, text="Felt Diameter Reduction (mm):", bg="#F0EAD6").grid(row=0, column=0, sticky='w', pady=2)
-        tk.Entry(rules_frame, textvariable=self.felt_offset_var, width=10).grid(row=0, column=1, sticky='w', pady=2)
+        tk.Label(rules_frame, text="Felt Diameter Reduction (mm):", bg=self.colors['bg_secondary'], fg=self.colors['text']).grid(row=0, column=0, sticky='w', pady=2)
+        tk.Entry(rules_frame, textvariable=self.felt_offset_var, width=10, fg=self.colors['entry_fg'], bg=self.colors['entry_bg']).grid(row=0, column=1, sticky='w', pady=2)
 
-        tk.Label(rules_frame, text="Card Additional Reduction (mm):", bg="#F0EAD6").grid(row=1, column=0, sticky='w', pady=2)
-        tk.Entry(rules_frame, textvariable=self.card_offset_var, width=10).grid(row=1, column=1, sticky='w', pady=2)
+        tk.Label(rules_frame, text="Card Additional Reduction (mm):", bg=self.colors['bg_secondary'], fg=self.colors['text']).grid(row=1, column=0, sticky='w', pady=2)
+        tk.Entry(rules_frame, textvariable=self.card_offset_var, width=10, fg=self.colors['entry_fg'], bg=self.colors['entry_bg']).grid(row=1, column=1, sticky='w', pady=2)
 
-        tk.Label(rules_frame, text="Leather Wrap Multiplier (1.00=default):", bg="#F0EAD6").grid(row=2, column=0, sticky='w', pady=2)
-        tk.Entry(rules_frame, textvariable=self.leather_mult_var, width=10).grid(row=2, column=1, sticky='w', pady=2)
+        tk.Label(rules_frame, text="Leather Wrap Multiplier (1.00=default):", bg=self.colors['bg_secondary'], fg=self.colors['text']).grid(row=2, column=0, sticky='w', pady=2)
+        tk.Entry(rules_frame, textvariable=self.leather_mult_var, width=10, fg=self.colors['entry_fg'], bg=self.colors['entry_bg']).grid(row=2, column=1, sticky='w', pady=2)
 
-        tk.Label(rules_frame, text="Min. Pad Size for Hole (mm):", bg="#F0EAD6").grid(row=3, column=0, sticky='w', pady=2)
-        tk.Entry(rules_frame, textvariable=self.min_hole_size_var, width=10).grid(row=3, column=1, sticky='w', pady=2)
+        tk.Label(rules_frame, text="Min. Pad Size for Hole (mm):", bg=self.colors['bg_secondary'], fg=self.colors['text']).grid(row=3, column=0, sticky='w', pady=2)
+        tk.Entry(rules_frame, textvariable=self.min_hole_size_var, width=10, fg=self.colors['entry_fg'], bg=self.colors['entry_bg']).grid(row=3, column=1, sticky='w', pady=2)
         
         # Felt Thickness with Unit Selection
-        felt_thickness_frame = tk.Frame(rules_frame, bg="#F0EAD6")
+        felt_thickness_frame = tk.Frame(rules_frame, bg=self.colors['bg_secondary'])
         felt_thickness_frame.grid(row=4, column=0, columnspan=2, sticky='w', pady=2)
-        tk.Label(felt_thickness_frame, text="Felt Thickness:", bg="#F0EAD6").pack(side="left")
-        tk.Entry(felt_thickness_frame, textvariable=self.felt_thickness_var, width=10).pack(side="left", padx=5)
-        tk.Radiobutton(felt_thickness_frame, text="in", variable=self.felt_thickness_unit_var, value="in", bg="#F0EAD6").pack(side="left")
-        tk.Radiobutton(felt_thickness_frame, text="mm", variable=self.felt_thickness_unit_var, value="mm", bg="#F0EAD6").pack(side="left")
+        tk.Label(felt_thickness_frame, text="Felt Thickness:", bg=self.colors['bg_secondary'], fg=self.colors['text']).pack(side="left")
+        tk.Entry(felt_thickness_frame, textvariable=self.felt_thickness_var, width=10, fg=self.colors['entry_fg'], bg=self.colors['entry_bg']).pack(side="left", padx=5)
+        tk.Radiobutton(felt_thickness_frame, text="in", variable=self.felt_thickness_unit_var, value="in", bg=self.colors['bg_secondary'], fg=self.colors['text']).pack(side="left")
+        tk.Radiobutton(felt_thickness_frame, text="mm", variable=self.felt_thickness_unit_var, value="mm", bg=self.colors['bg_secondary'], fg=self.colors['text']).pack(side="left")
 
 
-        button_frame = tk.Frame(main_frame, bg="#F0EAD6")
+        button_frame = tk.Frame(main_frame, bg=self.colors['bg_secondary'])
         button_frame.pack(side="bottom", pady=10, fill='x')
-        tk.Button(button_frame, text="Save", command=self.save_options).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Cancel", command=self.top.destroy).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Revert to Defaults", command=self.revert_to_defaults).pack(side="right", padx=10)
+        save_btn = tk.Button(button_frame, text="Save", command=self.save_options, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        save_btn.pack(side="left", padx=10)
+        cancel_btn = tk.Button(button_frame, text="Cancel", command=self.top.destroy, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        cancel_btn.pack(side="left", padx=10)
+        revert_btn = tk.Button(button_frame, text="Revert to Defaults", command=self.revert_to_defaults, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        revert_btn.pack(side="right", padx=10)
 
     def save_options(self):
         self.settings["units"] = self.unit_var.get()
@@ -367,10 +423,13 @@ class LayerColorWindow:
         self.settings = settings
         self.save_callback = save_callback
         
+        # Use Mac-native colors
+        self.colors = COLORS
+        
         self.top = tk.Toplevel(parent)
         self.top.title("Layer Color Mapping")
         self.top.geometry("450x420")
-        self.top.configure(bg="#F0EAD6")
+        self.top.configure(bg=self.colors['bg_secondary'])
         self.top.transient(parent)
         self.top.grab_set()
 
@@ -380,7 +439,7 @@ class LayerColorWindow:
 
         self.color_vars = {}
 
-        main_frame = tk.Frame(self.top, bg="#F0EAD6", padx=10, pady=10)
+        main_frame = tk.Frame(self.top, bg=self.colors['bg_secondary'], padx=10, pady=10)
         main_frame.pack(fill="both", expand=True)
         main_frame.columnconfigure(1, weight=1)
 
@@ -393,7 +452,7 @@ class LayerColorWindow:
         
         for i, key in enumerate(layer_map_keys):
             label_text = key.replace('_', ' ').capitalize() + ":"
-            tk.Label(main_frame, text=label_text, bg="#F0EAD6").grid(row=i, column=0, sticky='w', pady=3)
+            tk.Label(main_frame, text=label_text, bg=self.colors['bg_secondary'], fg=self.colors['text']).grid(row=i, column=0, sticky='w', pady=3)
             
             var = tk.StringVar()
             current_hex = self.settings["layer_colors"].get(key, "#000000")
@@ -404,10 +463,12 @@ class LayerColorWindow:
             combo.grid(row=i, column=1, sticky='ew', padx=5)
             self.color_vars[key] = var
 
-        button_frame = tk.Frame(main_frame, bg="#F0EAD6")
+        button_frame = tk.Frame(main_frame, bg=self.colors['bg_secondary'])
         button_frame.grid(row=len(layer_map_keys), column=0, columnspan=2, pady=20)
-        tk.Button(button_frame, text="Save", command=self.save_colors).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Cancel", command=self.top.destroy).pack(side="left", padx=10)
+        save_btn = tk.Button(button_frame, text="Save", command=self.save_colors, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        save_btn.pack(side="left", padx=10)
+        cancel_btn = tk.Button(button_frame, text="Cancel", command=self.top.destroy, fg=self.colors['button_fg'], bg=self.colors['button_bg'], relief="flat", bd=1, activebackground=self.colors['button_bg'], activeforeground=self.colors['button_fg'])
+        cancel_btn.pack(side="left", padx=10)
 
     def save_colors(self):
         for key, var in self.color_vars.items():

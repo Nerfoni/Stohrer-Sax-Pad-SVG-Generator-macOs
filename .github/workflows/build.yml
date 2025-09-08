@@ -1,31 +1,31 @@
-name: Build EXE
+name: Build macOS App
 
 on:
   push:
-    branches: [ main, beta ]
+    branches: [main, beta]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: macos-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: pip install pyinstaller svgwrite
+      - name: Install dependencies
+        run: pip install pyinstaller svgwrite
 
-    - name: Build with PyInstaller
-      run: pyinstaller --noconsole --onefile --name "StohrerPadGenerator" main.py
+      - name: Build with PyInstaller
+        run: pyinstaller --noconsole --onefile --name "StohrerPadGenerator" main.py
 
-    - name: Upload EXE
-      uses: actions/upload-artifact@v4
-      with:
-        name: StohrerPadGenerator
-        path: dist/StohrerPadGenerator.exe
+      - name: Upload macOS App
+        uses: actions/upload-artifact@v4
+        with:
+          name: StohrerPadGenerator-macOS
+          path: dist/StohrerPadGenerator
