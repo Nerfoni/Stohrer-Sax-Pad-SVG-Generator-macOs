@@ -63,6 +63,14 @@ jobs:
           # Copy icon to Resources
           cp icon.icns "StohrerPadGenerator.app/Contents/Resources/"
 
+      - name: Remove quarantine attribute and add ad-hoc signature
+        run: |
+          # Remove quarantine attribute that causes "damaged" error
+          xattr -d com.apple.quarantine "StohrerPadGenerator.app" 2>/dev/null || true
+
+          # Add ad-hoc code signature to bypass Gatekeeper
+          codesign --force --deep --sign - "StohrerPadGenerator.app"
+
       - name: Upload macOS App
         uses: actions/upload-artifact@v4
         with:
