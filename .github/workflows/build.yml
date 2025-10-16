@@ -21,16 +21,25 @@ jobs:
       - name: Install dependencies
         run: pip install pyinstaller svgwrite
 
-      - name: Build with PyInstaller (App Bundle)
+      - name: Build with PyInstaller (Universal Binary)
         run: |
-          pyinstaller --noconsole --onefile --name "StohrerPadGenerator" --icon=icon.icns main.py
+          # Build for Apple Silicon (ARM64)
+          arch -arm64 pyinstaller --noconsole --onefile --name "StohrerPadGenerator_arm64" --icon=icon.icns main.py
+
+          # Build for Intel (x86_64) using Rosetta
+          arch -x86_64 pyinstaller --noconsole --onefile --name "StohrerPadGenerator_x86_64" --icon=icon.icns main.py
 
           # Create proper macOS app bundle
           mkdir -p "StohrerPadGenerator.app/Contents/MacOS"
           mkdir -p "StohrerPadGenerator.app/Contents/Resources"
 
-          # Move the executable to the app bundle
-          mv dist/StohrerPadGenerator "StohrerPadGenerator.app/Contents/MacOS/"
+          # Create universal binary using lipo
+          lipo -create -output "StohrerPadGenerator.app/Contents/MacOS/StohrerPadGenerator" \
+            "dist/StohrerPadGenerator_arm64" \
+            "dist/StohrerPadGenerator_x86_64"
+
+          # Make executable
+          chmod +x "StohrerPadGenerator.app/Contents/MacOS/StohrerPadGenerator"
 
           # Create Info.plist for the app bundle
           cat > "StohrerPadGenerator.app/Contents/Info.plist" << EOF
@@ -56,12 +65,23 @@ jobs:
               <string>icon</string>
               <key>LSMinimumSystemVersion</key>
               <string>10.15</string>
+              <key>LSArchitecturePriority</key>
+              <array>
+                  <string>arm64</string>
+                  <string>x86_64</string>
+              </array>
           </dict>
           </plist>
           EOF
 
           # Copy icon to Resources
           cp icon.icns "StohrerPadGenerator.app/Contents/Resources/"
+
+      - name: Verify universal binary
+        run: |
+          # Check that the binary contains both architectures
+          file "StohrerPadGenerator.app/Contents/MacOS/StohrerPadGenerator"
+          lipo -info "StohrerPadGenerator.app/Contents/MacOS/StohrerPadGenerator"
 
       - name: Remove quarantine attribute and add ad-hoc signature
         run: |

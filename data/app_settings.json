@@ -1,0 +1,55 @@
+{
+  "units": "cm",
+  "felt_offset": 0.75,
+  "card_to_felt_offset": 2.0,
+  "leather_wrap_multiplier": 1.0,
+  "sheet_width": "13.5",
+  "sheet_height": "10",
+  "hole_option": "3.5mm",
+  "custom_hole_size": "4.0",
+  "min_hole_size": 16.5,
+  "felt_thickness": 3.175,
+  "felt_thickness_unit": "mm",
+  "engraving_on": true,
+  "show_engraving_warning": true,
+  "last_output_dir": "",
+  "resonance_clicks": 0,
+  "engraving_font_size": {
+    "felt": 2.0,
+    "card": 2.0,
+    "leather": 2.0,
+    "exact_size": 2.0
+  },
+  "engraving_location": {
+    "felt": {
+      "mode": "centered",
+      "value": 0.0
+    },
+    "card": {
+      "mode": "centered",
+      "value": 0.0
+    },
+    "leather": {
+      "mode": "from_outside",
+      "value": 1.0
+    },
+    "exact_size": {
+      "mode": "centered",
+      "value": 0.0
+    }
+  },
+  "layer_colors": {
+    "felt_outline": "#000000",
+    "felt_center_hole": "#0000A0",
+    "felt_engraving": "#A00000",
+    "card_outline": "#0000FF",
+    "card_center_hole": "#00A0FF",
+    "card_engraving": "#A000A0",
+    "leather_outline": "#FF0000",
+    "leather_center_hole": "#00E000",
+    "leather_engraving": "#FF8000",
+    "exact_size_outline": "#D0D000",
+    "exact_size_center_hole": "#A0A000",
+    "exact_size_engraving": "#BB7784"
+  }
+}
